@@ -775,6 +775,17 @@ button {
 }
 
 @media (max-width: 480px) {
+    .modal-dialog {
+        width: 95%;
+        padding: 20px 20px;
+    }
+
+    .close-auth {
+        /* Крестик */
+        top: 0px;
+        right: 5px;
+    }
+
     .button-text {
         display: none;
     }
