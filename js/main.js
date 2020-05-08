@@ -30,6 +30,8 @@ const menu = document.querySelector('.menu'); // показать, при кли
 const logo = document.querySelector('.logo');
 
 const cardsMenu = document.querySelector('.cards-menu');
+const inputSearch = document.querySelector('.input-search');
+const sectionHeading = document.querySelector('.rest-heading');
 
 //3
 const getData = async function(url) {
@@ -46,6 +48,20 @@ const getData = async function(url) {
 
     return res;
 }
+
+//4 Корзина
+let cart = [];
+const cartJson =  localStorage.getItem('cart');      
+      if(cartJson) 
+      {
+        cart = JSON.parse(cartJson);
+      // console.log('cart: ', JSON.parse(cartJson));
+      }
+    
+
+const modalBody = document.querySelector('.modal-body');
+const modalPrice = document.querySelector('.modal-pricetag');
+const clearCart = document.querySelector('.clear-cart');
 
 // getData('./db/partners.json');
 
@@ -105,7 +121,6 @@ function notAuthorized () {
             //console.log(login);
 
             //  debugger;
-           
             if (valid(login) && password ) {
               toggleModalAuth();
               buttonAuth.removeEventListener("click",toggleModalAuth)
@@ -141,8 +156,11 @@ function authorized () {
           buttonAuth.style.display = '';
           userName.style.display = '';
           buttonOut.style.display = '';
+          // Скрываем корзину
+          cartButton.style.display = '';
 
           localStorage.removeItem('delivery');
+          localStorage.removeItem('cart');
 
           buttonOut.removeEventListener("click",logOut);
           checkAuth();
@@ -150,14 +168,15 @@ function authorized () {
 
   userName.textContent = login;
 
+  // Показываем корзину
+  cartButton.style.display = 'flex';
+
   buttonAuth.style.display = 'none';
   userName.style.display = 'inline';
-  buttonOut.style.display = 'block';
+  buttonOut.style.display = 'flex';
 
   buttonOut.addEventListener("click",logOut);
 
-  // Показываем корзину
-  cartButton.style.display = 'flex';
 
 }
 
@@ -170,7 +189,11 @@ function checkAuth() {
   }
 
 
+// Функуия формирования верстки и вывода ресторанов в DOM на главную
 function createCardRestaurant(restaurant) {
+  /* 
+  Получаем обьект restaurant, разбираем его на переменные, формируем вертску и вставляем в DOM внутрь элемента cardsRestaurants
+  */
 
   // console.log(restaurant);
   // console.log(restaurant.name);
@@ -182,7 +205,9 @@ const { image, kitchen, price, name, stars, products, time_of_delivery: timeOfDe
 
   // Формируем верстку ресторана
   const card = `
-      <a class="card card-restaurant" data-menu="${products}">
+      <a class="card card-restaurant" 
+      data-menu="${products}"
+      data-info="${[name,price,stars,image,timeOfDelivery,kitchen]}">
       <img src="${image}" alt="image" class="card-image"/>
       <div class="card-text">
         <div class="card-heading">
@@ -205,18 +230,24 @@ const { image, kitchen, price, name, stars, products, time_of_delivery: timeOfDe
 
 
 
+
+// Функуия верстки блюд
 function createCardGood(goods) {
+  /*Принимаем goods, деструктуризируем, создаем элемент cardGood, добавляем ему атрибут id и класс card, 
+  формируем верстку для Карточки блюда, вставляем эту верствку в наш созданный  элемент cardGood, После чего вставляем сам элемент cardGood в DOM*/
+
   // console.log('goods: ', goods);
   const { price, id, image, name, description } = goods
   // console.log(price);
   
   // Создаем оболочку для верстки товара и добаялем класс  card
   const cardGood = document.createElement('div');
-  cardGood.setAttribute('id', id);
+  cardGood.setAttribute('id', id); 
+  // cardGood.id = id;
   cardGood.className = 'card';
   // сама верстка блюда
   const good =  `
-        <img src="${image}" alt="image" class="card-image"/>
+        <img src="${image}" alt="${name}" class="card-image"/>
         <div class="card-text">
           <div class="card-heading">
             <h3 class="card-title card-title-reg">${name}</h3>
@@ -229,33 +260,32 @@ function createCardGood(goods) {
               <span class="button-card-text">В корзину</span>
               <span class="button-cart-svg"></span>
             </button>
-            <strong class="card-price-bold">${price} ₽</strong>
+            <strong class="card-price card-price-bold">${price} ₽</strong>
           </div>
         </div>
       `;
-  // Добавляем в ДОМ
+  // Добавляем good в cardGood
   cardGood.insertAdjacentHTML('beforeend',good);
-
+   // Вставляем в ДОМ, внутрь элемента cardsMenu
   cardsMenu.insertAdjacentElement('beforeend',cardGood);
-
-  // console.log(cardGood);
-
 }
 
 
+// Функция Клика на ресторан
 function openGoods (event) {
   // определяем куда конкретно кликнули
   const target = event.target;
   // определяем верхнюю оболчку карточки,closest поднимается выше до селектора (класса) cards-restaurants
   const restaurant = target.closest('.card-restaurant');
-  console.log('restaurant',restaurant);
-  console.log(restaurant.querySelector('.card-title'));
+  // console.log('restaurant',restaurant);
+  // console.log(restaurant.querySelector('.card-title'));
 
   // скрываем все рестораны, показываем меню
-  if(restaurant) {
+  if(restaurant) { 
 
-                const sectionHeading = document.querySelector('.rest-heading');
+    // const sectionHeading = document.querySelector('.rest-heading');
                 // console.log(sectionHeading);
+                // console.log(restaurant.dataset.info.split(',')); // Парсим строку с разделителем , из атрибута data-info ресторана
                   sectionHeading.textContent = '';
 
                 const restName = restaurant.querySelector('.card-title').textContent,
@@ -317,6 +347,99 @@ function desc() {
   menu.classList.add('hide');
 }
 
+//Функция на кнопку добавления в корзину
+function addToCart(event){
+  const target = event.target;
+    // console.log('target: ', target);
+  const buttonAddToCart = target.closest('.button-add-cart');
+    // console.log('buttonAddToCart: ', buttonAddToCart);
+
+  if(buttonAddToCart){
+
+    const card = target.closest('.card');
+
+    const title = card.querySelector('.card-title-reg').textContent;
+    const cost = card.querySelector('.card-price').textContent;
+    const id = card.id;
+    
+    
+    /* Проверяем нет ли в нашей корзине уже этого id. Для этого берем метод find.
+      find ищет в массиве элемент по совпадению - условию описанной в функции 
+    */
+  // Создаем новый массив
+    const food = cart.find(function(item){
+      // console.log('id: ', id);
+      return item.id === id
+    });
+
+
+      if(food) {
+        food.count++;
+      }
+      else {
+        cart.push({ id, title, cost, count: 1 })
+      }
+
+    console.log('food: ', food);
+    console.log('cart: ', cart);
+  }
+}
+
+
+// Список в корзине - рендер 
+function renderCart() {
+  modalBody.textContent = '';
+  modalPrice.textContent = '0 ₽';
+  
+  cart.forEach(function({ id, title, cost, count }){
+
+    const cartRow =`
+        <div class="food-row">
+          <span class="food-name">${title}</span>
+          <strong class="food-price">${cost}</strong>
+          <div class="food-counter">
+              <button class="counter-button counter-minus" data-id="${id}">-</button>
+              <span class="counter">${count}</span>
+              <button class="counter-button counter-plus" data-id="${id}">+</button>
+          </div>
+        </div>`;
+
+    modalBody.insertAdjacentHTML('afterbegin',cartRow);
+
+    const totalPrice = cart.reduce(function(result,item) { 
+      return result + (parseFloat(item.cost))*item.count }, 0)
+
+      modalPrice.textContent = totalPrice + ' ₽';
+
+  });
+
+  localStorage.setItem('cart',JSON.stringify(cart)); // Сохраняем значение корзины в локалсторадж
+
+}
+
+
+// 
+function changeCount(event){
+  const target = event.target;
+  if(target.classList.contains('counter-button')){
+    const food = cart.find(function(item){
+      return item.id === target.dataset.id
+    });
+
+      if (target.classList.contains('counter-minus')) {
+        food.count--;
+                if(food.count === 0) {
+                cart.splice(cart.indexOf(food), 1);
+        }
+      }
+
+    if (target.classList.contains('counter-plus')) food.count++;
+
+    renderCart();
+  }
+}
+
+
 
 // 3.ОБРАБОТЧИКИ СОБЫТИЙ///////////////////////////////////////////////////
 // Запуск, СОБЫТИЯ////////////////////////////////////////////////////////////////////////////
@@ -334,14 +457,92 @@ function init() {
         });
 
         // Клик на корзину
-        cartButton.addEventListener("click", toggleModal);
+        cartButton.addEventListener("click", function(){
+          renderCart();
+          toggleModal();
+        });
         // Клик на закрытие карзины
         close.addEventListener("click", toggleModal);
         // Клик на ресторан
         cardsRestaurants.addEventListener('click',openGoods)
-
         // При клике на лого выозвращяем рестораны
         logo.addEventListener('click', desc)
+
+        // 
+        cardsMenu.addEventListener('click',addToCart);
+
+        // 
+        modalBody.addEventListener('click',changeCount);
+
+        // 
+        clearCart.addEventListener('click',function(){
+          cart.length = 0;
+          renderCart();
+          localStorage.removeItem('cart');
+        });
+
+        //Поиск блюд по Enter
+        inputSearch.addEventListener('keydown', function(event){
+          // console.log('event.key: ', event.key);
+          // console.log('event.key: ', event.keyCode);
+          if(event.keyCode === 13) {
+            // Сохраняем значения ввода до 13 в target
+            const target = event.target.value.toLowerCase().trim();
+            event.target.value = '';
+            if(!target || target.length < 3) {
+              event.target.style.backgroundColor = 'tomato';
+              setTimeout(function(){event.target.style.backgroundColor = ''}, 2000)
+              return;
+            }
+            // console.log(target);
+            // Сначала будем получаеть все товары
+            const menuAll = [];
+            // // Будущий отфильрованный по target массив с подходящими элементиами  
+            // const menuSearch = [];
+
+            // Идем на сервер, передаем фильтр target и получаем массив для рендера (.php?Search=${target})
+            getData('./db/partners.json')
+              .then(function(rests) {
+                // Метод map() создаёт новый массив с результатом true для каждого элемента массива.
+                const menuLinks = rests.map(function(item){
+                  return item.products;
+                });
+                // console.log('products: ', products);
+
+                // Бежим по адресам ресторанов, получаем меню каждого, и записываем все в наш массив menuAll
+                menuLinks.forEach(link => {
+                  // console.log('link: ', link);
+
+                  getData('./db/'+ link)
+                    .then(function(menuRest){
+                      // ... spread оператор посогает обьединить в один массив
+                      menuAll.push(...menuRest);
+                      // console.log('menuAll: ', menuAll);
+
+                      const menuSearch = menuAll.filter(function(item){
+                        return item.name.toLowerCase().includes(target);
+                      });
+
+                      sectionHeading.textContent = '';
+                      sectionHeading.insertAdjacentHTML('beforeend','<h2 class="section-title restaurant-title">Результат поиска</h2>');
+
+                      cardsMenu.textContent = '';
+                      containerPromo.classList.add('hide');
+                      restaurants.classList.add('hide');
+                      menu.classList.remove('hide');
+                      return menuSearch;
+
+                    })
+                    .then(function(menuSearch){
+                      // console.log('menuSearch: ', menuSearch);
+                      menuSearch.forEach(createCardGood);
+                    });
+                });
+
+            });
+
+          }
+        })
 
         //  Реализуем Слайдер в Промо https://swiperjs.com
         new Swiper('.swiper-container', {
