@@ -49,15 +49,12 @@ const getData = async function(url) {
     return res;
 }
 
+// Получаем значение из локалсторадж при обновлении страницы
+let login = '', password = '';
+login = localStorage.getItem('delivery');
+
 //4 Корзина
-let cart = [];
-const cartJson =  localStorage.getItem('cart');      
-      if(cartJson) 
-      {
-        cart = JSON.parse(cartJson);
-      // console.log('cart: ', JSON.parse(cartJson));
-      }
-    
+const cart = [];
 
 const modalBody = document.querySelector('.modal-body');
 const modalPrice = document.querySelector('.modal-pricetag');
@@ -67,9 +64,21 @@ const clearCart = document.querySelector('.clear-cart');
 
 //console.log(buttonLogin);
 
-// Получаем значение из локалсторадж при обновлении страницы
-let login = '', password = '';
-login = localStorage.getItem('delivery');
+function saveCart() {
+    localStorage.setItem(login+'Cart',JSON.stringify(cart)); // Сохраняем значение корзины в локалсторадж
+}
+
+function loadCart() {
+  const cartJson =  localStorage.getItem(login+'Cart');      
+  if(cartJson)
+  {
+    cart.length = 0;
+      //cart = JSON.parse(cartJson);
+    cart.push(...JSON.parse(cartJson));
+  // console.log('cart: ', JSON.parse(cartJson));
+  }
+
+}
 
 //modalAuth.classList.add('hello');
 //modalAuth.classList.contains('hello');  // contains есть или нет, возвращает true или false
@@ -127,6 +136,7 @@ function notAuthorized () {
               closeModalAuth.removeEventListener("click",toggleModalAuth);
               logInForm.removeEventListener("submit",logIn);
               logInForm.reset(); // Очистить все инпуты формы
+
               checkAuth();
             }
             else {
@@ -145,22 +155,24 @@ function notAuthorized () {
 function authorized () {
     console.log('aвторизован');
     //buttonAuth.style.backgroundColor = 'red';
+    loadCart();
 
         function logOut(){
-
           // Возврат на главную
           desc();
           ////////////////////////////////
 
-          login = null;  password = null;
+          localStorage.removeItem('delivery');
+          // localStorage.removeItem(login+'Cart');
+
+          login = null;  password = null; 
           buttonAuth.style.display = '';
           userName.style.display = '';
           buttonOut.style.display = '';
           // Скрываем корзину
           cartButton.style.display = '';
 
-          localStorage.removeItem('delivery');
-          localStorage.removeItem('cart');
+          cart.length = 0;
 
           buttonOut.removeEventListener("click",logOut);
           checkAuth();
@@ -180,13 +192,16 @@ function authorized () {
 
 }
 
-function checkAuth() {
-  if (login) {
-      authorized();
-    } else {
-      notAuthorized();
-    }
-  }
+// function checkAuth() {
+//   if (login) {
+//       authorized();
+//     } else {
+//       notAuthorized();
+//     }
+//   }
+
+const checkAuth = ()=> login ? authorized() : notAuthorized();
+
 
 
 // Функуия формирования верстки и вывода ресторанов в DOM на главную
@@ -382,6 +397,9 @@ function addToCart(event){
 
     console.log('food: ', food);
     console.log('cart: ', cart);
+
+    saveCart();
+      
   }
 }
 
@@ -413,7 +431,7 @@ function renderCart() {
 
   });
 
-  localStorage.setItem('cart',JSON.stringify(cart)); // Сохраняем значение корзины в локалсторадж
+
 
 }
 
@@ -435,6 +453,7 @@ function changeCount(event){
 
     if (target.classList.contains('counter-plus')) food.count++;
 
+    saveCart();
     renderCart();
   }
 }
@@ -477,8 +496,8 @@ function init() {
         // 
         clearCart.addEventListener('click',function(){
           cart.length = 0;
+          localStorage.removeItem(Login+'Cart');
           renderCart();
-          localStorage.removeItem('cart');
         });
 
         //Поиск блюд по Enter
